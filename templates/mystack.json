@@ -1,0 +1,181 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS Cloudformation Template for machine learning development",
+  "Parameters": {
+    "InstanceType": {
+      "Description": "EC2 instance type",
+      "Type": "String",
+      "Default": "t2.small",
+      "AllowedValues": [
+        "t2.micro",
+        "t2.small",
+        "t2.xlarge",
+        "p2.xlarge"
+      ],
+      "ConstraintDescription": "must be a valid EC2 instance type."
+    },
+    "KeyName": {
+      "Description": "Name of an EC2 KeyPair to enable SSH access to the instance.",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+    },
+    "MyIdentifier": {
+      "Type": "String",
+      "Default": "mystack",
+      "MinLength": "3",
+      "MaxLength": "18",
+      "Description": "The unique identifier to use for stack and tag:names.",
+      "ConstraintDescription": "must be unique identifier across your aws resources."
+    },
+    "MyImageId": {
+      "Type": "String",
+      "Default": "ami-66506c1c",
+      "MinLength": "8",
+      "MaxLength": "18",
+      "Description": "The ami to use for the ec2 instance.",
+      "ConstraintDescription": "must be a valid aws ami id."
+    },
+    "SSHLocation": {
+      "Description": " The IP address range that can be used to access the web server using SSH.",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    }
+  },
+  "Mappings": {
+    "AWSInstanceType2Arch" : {
+      "t2.micro"    : { "Arch" : "HVM64"  },
+      "t2.small"    : { "Arch" : "HVM64"  },
+      "t2.xlarge"    : { "Arch" : "HVM64"  },
+      "p2.xlarge"    : { "Arch" : "HVM64"  }
+    }
+  },
+	"Resources": {
+    "MyVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock" : "172.31.0.0/16",
+        "EnableDnsSupport" : "true",
+        "EnableDnsHostnames" : "true",
+        "InstanceTenancy" : "default",
+        "Tags" : [ {"Key" : "Name", "Value" : { "Ref": "MyIdentifier" }} ]
+      }
+    },
+    "MyInternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags" : [ {"Key" : "Name", "Value" : { "Ref": "MyIdentifier" }} ]
+      }
+    },
+    "InternetGatewayAttach": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "InternetGatewayId": { "Ref": "MyInternetGateway" },
+        "VpcId": { "Ref": "MyVPC" }
+      }
+    },
+    "MySubnet": {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "MyVPC" },
+        "CidrBlock": "172.31.1.0/24",
+        "AvailabilityZone": "us-east-1a",
+        "MapPublicIpOnLaunch": true,
+        "Tags" : [ {"Key" : "Name", "Value" : "my subnet az 1a"} ]
+      },
+      "DependsOn" : "MyInternetGateway"
+    },
+    "MyRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : { "Ref" : "MyVPC" },
+        "Tags" : [ { "Key" : "project", "Value" : { "Ref": "MyIdentifier" } } ]
+      }
+    },
+    "SubnetRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "MySubnet" },
+        "RouteTableId" : { "Ref" : "MyRouteTable" }
+      }
+    },
+    "myRoute": {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "MyRouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "MyInternetGateway" }
+      },
+      "DependsOn" : "MyInternetGateway"
+    },
+    "MyElasticIp01": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "InstanceId": { "Ref": "EC2Instance" },
+        "Domain": "vpc"
+      },
+      "DependsOn": ["EC2Instance", "MyInternetGateway"]
+    },
+		"MySecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+        "VpcId": { "Ref": "MyVPC" },
+				"GroupName": "SSH access enabled, port 8888 exposed",
+				"GroupDescription": "Enable SSH access via port 22",
+				"SecurityGroupIngress": [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "22",
+						"ToPort": "22",
+						"CidrIp": {
+							"Ref": "SSHLocation"
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "8888",
+						"ToPort": "8888",
+						"CidrIp": "0.0.0.0/0"
+					}
+				]
+			}
+		},
+		"EC2Instance": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"InstanceType": { "Ref": "InstanceType" },
+        "AvailabilityZone" : "us-east-1a",
+        "SubnetId": { "Ref": "MySubnet" },
+				"SecurityGroupIds": [
+          { "Fn::GetAtt" : [ "MySecurityGroup", "GroupId" ] }
+				],
+				"KeyName": { "Ref": "KeyName" },
+				"ImageId": { "Ref": "MyImageId" },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+              "VolumeSize": "100",
+              "VolumeType": "gp2",
+              "DeleteOnTermination": "false"
+            }
+          }
+        ],
+        "Tags" : [
+          { "Key" : "Project", "Value" : { "Ref": "MyIdentifier" } },
+          { "Key" : "Name", "Value" : { "Ref": "MyIdentifier" } }
+        ]
+			},
+      "DependsOn": "MySecurityGroup"
+		}
+	},
+  "Outputs": {
+    "InstanceID": {
+      "Description": "The Instance ID",
+      "Value" : { "Ref" : "EC2Instance" }
+    }
+  }
+}

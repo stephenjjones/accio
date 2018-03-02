@@ -1,0 +1,187 @@
+# https://gist.github.com/svrist/73e2d6175104f7ab4d201280acba049c
+import sys
+import os
+import boto3
+import json
+
+from clint.arguments import Args
+from clint.textui import prompt, puts, colored, validators
+
+boto3.setup_default_session(profile_name='stephen')
+ec2_client = boto3.client('ec2')
+cf_client = boto3.client('cloudformation')
+
+def list_all_ec2():
+    response = ec2_client.describe_instances()
+    for reservation in response["Reservations"]:
+        for instance in reservation["Instances"]:
+            puts(colored.blue(f'ec2 instance / {instance["InstanceId"]} / {get_instance_name(instance)} / {instance["State"]["Name"]}'))
+
+def get_instance_name(instance):
+    for tag in instance["Tags"]:
+        if tag['Key'] == 'Name':
+            return tag['Value']
+
+def choose_ec2(attr='InstanceId'):
+    response = ec2_client.describe_instances()
+    ec2_type_options = []
+    for i, reservation in enumerate(response["Reservations"], start=1):
+        for j, instance in enumerate(reservation["Instances"], start=1):
+            instance_id = instance["InstanceId"]
+            state = instance["State"]["Name"]
+            # print(instance)
+            instance_name = get_instance_name(instance)
+            ec2_type_options.append({'selector': i, 'prompt': f'{instance_name} / {instance_id} / {instance["InstanceType"]} / {state}', 'return': instance})
+
+    selected_instance = prompt.options("Which ec2 instance", ec2_type_options)
+    puts(colored.blue(f'You selected {selected_instance["InstanceId"]}'))
+    return selected_instance
+
+def choose_stack():
+    stacks = cf_client.list_stacks()['StackSummaries']
+    options = []
+    idx = 1
+    for stack in stacks:
+        if stack['StackStatus'] != 'DELETE_COMPLETE':
+           options.append({'selector': idx, 'prompt': stack['StackName'], 'return': stack['StackName']})
+           idx += 1
+    selected_stack = prompt.options("Which stack", options)
+    puts(colored.blue(f'You selected {selected_stack}'))
+    return selected_stack
+
+def validate_stack_exists(stack_name):
+    stacks = cf.list_stacks()['StackSummaries']
+    for stack in stacks:
+        if stack['StackStatus'] == 'DELETE_COMPLETE':
+            continue
+        if stack_name == stack['StackName']:
+            return True
+    return False
+
+def create_stack():
+    stack_name = prompt.query("What's the name of your stack?")
+
+    ec2_type_options = [
+        {'selector': '1', 'prompt': 't2.small', 'return': 't2.small'},
+        {'selector': '2', 'prompt': 't2.xlarge', 'return': 't2.xlarge'},
+        {'selector': '3', 'prompt': 'p2.xlarge', 'return': 'p2.xlarge'}
+    ]
+    ec2_type = prompt.options("What type of ec2 instance", ec2_type_options)
+
+    print(stack_name)
+    print(ec2_type)
+    template = get_template()
+
+    print(stack_name)
+    print(ec2_type)
+
+    response = cf_client.create_stack(
+        StackName=stack_name,
+        TemplateBody=json.dumps(template),
+        Parameters=[
+            {
+                'ParameterKey': 'MyIdentifier',
+                'ParameterValue': stack_name
+            },
+            {
+                'ParameterKey': 'InstanceType',
+                'ParameterValue': ec2_type
+            },
+            {
+                'ParameterKey': 'KeyName',
+                'ParameterValue': 'sj-mac-2017',
+                'UsePreviousValue': True
+            }
+        ]
+    )
+
+    puts(colored.blue(f'Creating stack {stack_name} with a {ec2_type} instance'))
+
+def delete_stack(stack_name):
+    response = cf_client.delete_stack(StackName=stack_name)
+    # TODO: check response to make sure 
+    puts(colored.blue(f'Deleting stack {stack_name}'))
+
+def get_template():
+    '''
+    Loads a cloudformation template from file
+    '''
+    with open('./infra/templates/fastai.json') as json_data:
+        template_data = json.load(json_data)
+    template_str = json.dumps(template_data)
+    cf_client.validate_template(TemplateBody=template_str)
+    #return json.dumps(template)
+    return template_data
+
+def ssh_login():
+    '''
+    Prompts for ec2 instance, then ssh into it
+    '''
+    ec2_instance = choose_ec2()
+    public_ip = ec2_instance["PublicIpAddress"]
+    puts(colored.green('Logging into  ') + str(public_ip) + '...')
+    os.system(f'ssh -v -p 22 -i ~/.ssh/sj-mac-2017.pem ubuntu@{public_ip}; exec bash')
+
+def ssh_launch():
+    pass
+
+def stop_ec2():
+    ec2_instance = choose_ec2()
+    ec2_instance_id = ec2_instance["InstanceId"]
+
+    ec2_client.stop_instances(InstanceIds=[ec2_instance_id])
+    puts(colored.green('Stopping ') + str(ec2_instance_id) + '...')
+
+def start_ec2():
+    ec2_instance = choose_ec2()
+    ec2_instance_id = ec2_instance["InstanceId"]
+
+    ec2_client.start_instances(InstanceIds=[ec2_instance_id])
+    puts(colored.green('Starting ') + str(ec2_instance_id) + '...')
+
+def attach_volume():
+    ec2 = boto3.resource('ec2', region_name='us-east-1')
+    volumes = ec2.volumes.all()
+    for vol in volumes:
+        puts(colored.green('Volumes ') + str(vol))
+    # ec2_client.attach_volume(volume_id, instance_id, 'dev/sda1')
+
+
+if __name__ == '__main__':
+    args = Args()
+
+    puts(colored.yellow('Aruments passed in: ') + str(args.all))
+    puts(colored.yellow('Flags detected: ') + str(args.flags))
+
+    arg_cmd = args.get(0)
+    puts(colored.cyan('Command: ') + str(arg_cmd))
+
+    if arg_cmd == 'start':
+        start_ec2()
+    elif arg_cmd == 'stop':
+        stop_ec2()
+    elif arg_cmd == 'ssh':
+        ssh_login()
+    elif arg_cmd == 'launch':
+        ssh_launch()
+    elif arg_cmd == 'create-stack':
+        create_stack()
+    elif arg_cmd == 'check-status':
+        list_all_ec2()
+    elif arg_cmd == 'attach-volume':
+        attach_volume()
+    elif arg_cmd == 'choose-stack':
+        choose_stack()
+    elif arg_cmd == 'delete-stack':
+        arg1 = args.get(1)
+        if arg1:
+            stack_name = args.get(1)
+            stack_exists = validate_stack_exists(stack_name)
+        else:
+            stack_name = choose_stack()
+            stack_exists = True
+
+        if stack_exists:
+            delete_stack(stack_name)
+        else:
+            puts(colored.red(f'Stack {stack_name} does not exist'))
