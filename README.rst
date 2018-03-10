@@ -19,14 +19,17 @@ Resources Description
 Defaults:
 
 - ami: ami-66506c1c `ami reference <https://github.com/stephenjjones/accio/blob/master/ami.rst/>`_
+
   - ubuntu 16 LTS
   - nvidia docker (9.1)
+
 - EBS backed ec2 instance
 - EBS Volume has 100GB (gp2)
 - VPC + subnet
 - Internet Gateway 
 - elasticIP
 - Security Group
+
   - tcp 22 (ssh)
   - tcp 8888
 
