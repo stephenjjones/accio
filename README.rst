@@ -11,19 +11,62 @@ consuming and error prone.  Accio allows you to do all this in a few simple comm
 
 **Accio:** A charm that allows the caster to summon an object.
 
-CLI Commands
+Resources Description
+---------------------
+
+**Modify accio/templates/mystack to change attributes of the stack**
+
+Defaults:
+
+- ami: ami-66506c1c `ami reference <https://github.com/stephenjjones/accio/blob/master/ami.rst/>`_
+  - ubuntu 16 LTS
+  - nvidia docker (9.1)
+- EBS backed ec2 instance
+- EBS Volume has 100GB (gp2)
+- VPC + subnet
+- Internet Gateway 
+- elasticIP
+- Security Group
+  - tcp 22 (ssh)
+  - tcp 8888
+
+Installation
 ------------
 
-All CLI commands listed assume you have this alias set::
+Accio is under rapid development and has not yet been published to PyPA.
 
-    alias accio="pipenv run python manage.py"
+Clone the Accio github repo::
+
+    $ git clone git@github.com:stephenjjones/accio.git
+    $ cd accio
+
+Highly recommended to use pipenv to manage python environment and dependencies::
+
+    $ pipenv install
+
+All CLI commands listed assume you have the **accio** alias set, and that you run them from the
+accio root directory::
+
+    $ alias accio="pipenv run python accio/cli.py"
+    # OR
+    $ source alias.sh
+
+Alternatively, you can pip install to get the accio cli available outside the project root::
+
+    $ pip install .
 
 Examples
 --------
 
+** All commands must be run from 
+
 I want to create a new stack named `mystack` with the default template::
 
     $ accio create-stack mystack
+
+I want to ssh into my new ec2 instance::
+
+    $ accio ssh
 
 I want to change my ec2 instance type to p3::
 
@@ -37,75 +80,15 @@ I want to start a stopped instance::
 
     $ accio start
 
+I want to delete my stack named `mystack`::
 
-Documentation on how the base AMI was configured
-------------------------------------------------
+    $ accio delete-stack mystack
 
-**This is for reference only and does not need to be run by the end user**
+Uploads a local ssh key from ~/.ssh/[keyname] to the ec2 instance. **TODO: make .pem and id_rsa
+keyname dynamic, currently hardcoded**::
 
-Install docker CE
+    $ accio upload-keys
 
-https://docs.docker.com/install/linux/docker-ce/ubuntu/#set-up-the-repository
-
-sudo apt-get update
-
-sudo apt-get install \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    software-properties-common
-
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-
-sudo apt-key fingerprint 0EBFCD88
-
-sudo add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-   $(lsb_release -cs) \
-   stable"
-
-sudo apt-get update
-
-sudo apt-get install docker-ce
-
-sudo docker run hello-world
-
-sudo apt-get install build-essential
-
-sudo apt-get install linux-headers-$(uname -r)
-
-Install the CUDA toolkit
-# https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&target_distro=Ubuntu&target_version=1604&target_type=debnetwork
-
-wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_9.1.85-1_amd64.deb
-
-sudo dpkg -i cuda-repo-ubuntu1604_9.1.85-1_amd64.deb
-sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/7fa2af80.pub
-
-sudo apt-get update
-
-sudo apt-get install cuda
-
-Install nvidia-docker https://github.com/NVIDIA/nvidia-docker#xenial-x86_64
-$ curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | \
-  sudo apt-key add -
-
-$ curl -s -L https://nvidia.github.io/nvidia-docker/ubuntu16.04/amd64/nvidia-docker.list | \
-  sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-
-$ sudo apt-get update
-
-$ sudo apt-get install -y nvidia-docker2
-
-$ sudo pkill -SIGHUP dockerd
-
-$ docker run --runtime=nvidia --rm nvidia/cuda nvidia-smi
-
-Enable running docker without sudo:
-https://docs.docker.com/install/linux/linux-postinstall/
-$ sudo groupadd docker
-$ sudo usermod -aG docker $USER
-$ newgrp docker
 
 
 Misc Commands
