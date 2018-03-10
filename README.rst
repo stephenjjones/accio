@@ -7,9 +7,9 @@ AWS p2 and p3 instances can be quite expensive for an independent ML developer. 
 resources, dyanimically changing ec2 instance types, starting/stopping instances, etc can be time
 consuming and error prone.  Accio allows you to do all this in a few simple commands from your terminal.
 
-Accio definition: A charm that allows the caster to summon an object.
-
 .. image:: https://i.amz.mshcdn.com/ZjRzpcX1wS2o-py5V0aqR2RHiIA=/950x534/filters:quality(90)/2016%2F02%2F04%2F77%2FHarry_Potte.56329.jpg
+
+**Accio:** A charm that allows the caster to summon an object.
 
 CLI Commands
 ------------
