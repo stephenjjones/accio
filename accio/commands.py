@@ -64,13 +64,17 @@ def create_stack(stack_name):
     ec2_type_options = [
         {'selector': '1', 'prompt': 't2.small', 'return': 't2.small'},
         {'selector': '2', 'prompt': 't2.xlarge', 'return': 't2.xlarge'},
-        {'selector': '3', 'prompt': 'p2.xlarge', 'return': 'p2.xlarge'}
+        {'selector': '3', 'prompt': 'p2.xlarge', 'return': 'p2.xlarge'},
+        {'selector': '4', 'prompt': 'p3.2xlarge', 'return': 'p3.2xlarge'}
     ]
     ec2_type = prompt.options("What type of ec2 instance", ec2_type_options)
 
     puts(colored.cyan(f'You chose {ec2_type}'))
     template = get_template()
     image_id = 'ami-2fa95952' # Ubuntu nvidia-docker
+
+    print(template)
+    print(stack_name)
 
     response = cf_client.create_stack(
         StackName=stack_name,
@@ -129,7 +133,8 @@ def update_stack(stack_name):
             },
             {
                 'ParameterKey': 'KeyName',
-                'ParameterValue': 'sj-mac-2017'
+                'ParameterValue': 'sj-mac-2017',
+                'UsePreviousValue': True
             }
         ]
     )
@@ -145,7 +150,7 @@ def get_template():
     """ 
     Loads a cloudformation template from file
     """
-    with open('./templates/mystack.json') as json_data:
+    with open('./accio/templates/mystack2.json') as json_data:
         template_data = json.load(json_data)
     template_str = json.dumps(template_data)
     cf_client.validate_template(TemplateBody=template_str)

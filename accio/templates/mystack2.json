@@ -11,7 +11,8 @@
         "t2.small",
         "t2.medium",
         "t2.xlarge",
-        "p2.xlarge"
+        "p2.xlarge",
+        "p3.2xlarge"
       ],
       "ConstraintDescription": "must be a valid EC2 instance type."
     },
@@ -22,7 +23,7 @@
     },
     "MyIdentifier": {
       "Type": "String",
-      "Default": "mystack",
+      "Default": "thestack",
       "MinLength": "3",
       "MaxLength": "18",
       "Description": "The unique identifier to use for stack and tag:names.",
@@ -52,7 +53,8 @@
       "t2.small"    : { "Arch" : "HVM64"  },
       "t2.medium"    : { "Arch" : "HVM64"  },
       "t2.xlarge"    : { "Arch" : "HVM64"  },
-      "p2.xlarge"    : { "Arch" : "HVM64"  }
+      "p2.xlarge"    : { "Arch" : "HVM64"  },
+      "p3.2xlarge"    : { "Arch" : "HVM64"  }
     }
   },
 	"Resources": {
@@ -84,9 +86,9 @@
       "Properties": {
         "VpcId": { "Ref": "MyVPC" },
         "CidrBlock": "172.31.1.0/24",
-        "AvailabilityZone": "us-east-1d",
+        "AvailabilityZone": "us-east-1c",
         "MapPublicIpOnLaunch": true,
-        "Tags" : [ {"Key" : "Name", "Value" : "my subnet az 1d"} ]
+        "Tags" : [ {"Key" : "Name", "Value" : "my subnet az 1c"} ]
       },
       "DependsOn" : "MyInternetGateway"
     },
@@ -149,7 +151,7 @@
 			"Type": "AWS::EC2::Instance",
 			"Properties": {
 				"InstanceType": { "Ref": "InstanceType" },
-        "AvailabilityZone" : "us-east-1d",
+        "AvailabilityZone" : "us-east-1c",
         "SubnetId": { "Ref": "MySubnet" },
 				"SecurityGroupIds": [
           { "Fn::GetAtt" : [ "MySecurityGroup", "GroupId" ] }
