@@ -236,6 +236,23 @@ def upload_keys():
     puts(colored.green(f'Uploading keys to {str(public_ip)} ...'))
     os.system(f'scp -i ~/.ssh/{my_pem} ~/.ssh/{key_upload} ubuntu@{public_ip}:~/.ssh/id_rsa')
 
+def scp():
+    """
+    scp local file to remote ec2
+    """
+    ec2_instance = choose_ec2()
+    my_keys_path = os.path.expanduser('~/.ssh/')
+    onlyfiles = [f for f in listdir(my_keys_path) if isfile(join(my_keys_path, f))]
+    my_pem = choose_from_list(onlyfiles, "Which pem to access your instance?")
+    public_ip = ec2_instance["PublicIpAddress"]
+    local_file = prompt.query("What file to upload (enter full path)?")
+    if not os.path.exists(local_file):
+        puts(colored.green(f'Local file {local_file} does not exists'))
+        return
+    remote_path = prompt.query("Enter path on remote to upload to?")
+    puts(colored.green(f'Uploading local file ({local_file}) to {str(public_ip)} ...'))
+    os.system(f'scp -i ~/.ssh/{my_pem} {local_file} ubuntu@{public_ip}:{remote_path}')
+
 def tag_image():
     """
     WIP
