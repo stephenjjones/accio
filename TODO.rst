@@ -10,3 +10,5 @@ To Do List
 * Attach volume command
 * Paramaterize aws profile
 * Paramaterize keypair
+* scp
+* spot instances

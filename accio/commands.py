@@ -1,5 +1,7 @@
 # https://gist.github.com/svrist/73e2d6175104f7ab4d201280acba049c
 import os
+from os import listdir
+from os.path import isfile, join
 import boto3
 import json
 
@@ -50,6 +52,15 @@ def choose_stack():
     selected_stack = prompt.options("Which stack", options)
     puts(colored.blue(f'You selected {selected_stack}'))
     return selected_stack
+
+def choose_file(file_list, message):
+    options = []
+    for i, file_name in enumerate(file_list, start=1):
+        options.append({'selector': i, 'prompt': f'{file_name}', 'return': file_name})
+
+    key = prompt.options(message, options)
+    puts(colored.blue(f'You selected {key}'))
+    return key
 
 def validate_stack_exists(stack_name):
     stacks = cf_client.list_stacks()['StackSummaries']
@@ -133,8 +144,7 @@ def update_stack(stack_name):
             },
             {
                 'ParameterKey': 'KeyName',
-                'ParameterValue': 'sj-mac-2017',
-                'UsePreviousValue': True
+                'ParameterValue': 'sj-mac-2017'
             }
         ]
     )
@@ -205,12 +215,15 @@ def upload_keys():
     """
     Uploads keys from local ~/.ssh/xyz to remote ec2
     """
+    my_keys_path = os.path.expanduser('~/.ssh/')
+    onlyfiles = [f for f in listdir(my_keys_path) if isfile(join(my_keys_path, f))]
+    key_upload = choose_file(onlyfiles, "Which key do you want to upload?")
     ec2_instance = choose_ec2()
+    my_pem = choose_file(onlyfiles, "Which pem to access your instance?")
     public_ip = ec2_instance["PublicIpAddress"]
-    my_pem = 'sj-mac-2017.pem'
     local_key = 'id_rsa_ec2'
     puts(colored.green(f'Uploading keys to {str(public_ip)} ...'))
-    os.system(f'scp -i ~/.ssh/{my_pem} ~/.ssh/{local_key} ubuntu@{public_ip}:~/.ssh/id_rsa')
+    os.system(f'scp -i ~/.ssh/{my_pem} ~/.ssh/{key_upload} ubuntu@{public_ip}:~/.ssh/id_rsa')
 
 def tag_image():
     """
