@@ -53,7 +53,7 @@ def choose_stack():
     puts(colored.blue(f'You selected {selected_stack}'))
     return selected_stack
 
-def choose_file(file_list, message):
+def choose_from_list(file_list, message):
     options = []
     for i, file_name in enumerate(file_list, start=1):
         options.append({'selector': i, 'prompt': f'{file_name}', 'return': file_name})
@@ -86,6 +86,8 @@ def create_stack(stack_name):
 
     print(template)
     print(stack_name)
+    my_keys = list_keypairs()
+    key = choose_from_list(my_keys, 'Which key?')
 
     response = cf_client.create_stack(
         StackName=stack_name,
@@ -105,7 +107,7 @@ def create_stack(stack_name):
             },
             {
                 'ParameterKey': 'KeyName',
-                'ParameterValue': 'sj-mac-2017',
+                'ParameterValue': key,
                 'UsePreviousValue': True
             }
         ]
@@ -171,13 +173,22 @@ def ssh_login():
     """
     Prompts for ec2 instance, then ssh into it
     """
+    my_keys_path = os.path.expanduser('~/.ssh/')
+    onlyfiles = [f for f in listdir(my_keys_path) if isfile(join(my_keys_path, f))]
+    my_pem = choose_from_list(onlyfiles, "Which pem to access your instance?")
     ec2_instance = choose_ec2()
     public_ip = ec2_instance["PublicIpAddress"]
     puts(colored.green('Logging into  ') + str(public_ip) + '...')
-    os.system(f'ssh -v -p 22 -i ~/.ssh/sj-mac-2017.pem ubuntu@{public_ip}; exec bash')
+    os.system(f'ssh -v -p 22 -i ~/.ssh/{my_pem} ubuntu@{public_ip}; exec bash')
 
 def ssh_launch():
     pass
+
+def list_keypairs():
+    response = ec2_client.describe_key_pairs()
+    my_keypairs = [k['KeyName'] for k in response['KeyPairs']]
+    print(my_keypairs)
+    return my_keypairs
 
 def stop_ec2():
     ec2_instance = choose_ec2()
@@ -217,9 +228,9 @@ def upload_keys():
     """
     my_keys_path = os.path.expanduser('~/.ssh/')
     onlyfiles = [f for f in listdir(my_keys_path) if isfile(join(my_keys_path, f))]
-    key_upload = choose_file(onlyfiles, "Which key do you want to upload?")
+    key_upload = choose_from_list(onlyfiles, "Which key do you want to upload?")
     ec2_instance = choose_ec2()
-    my_pem = choose_file(onlyfiles, "Which pem to access your instance?")
+    my_pem = choose_from_list(onlyfiles, "Which pem to access your instance?")
     public_ip = ec2_instance["PublicIpAddress"]
     local_key = 'id_rsa_ec2'
     puts(colored.green(f'Uploading keys to {str(public_ip)} ...'))
