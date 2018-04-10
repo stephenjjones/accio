@@ -6,7 +6,7 @@ import json
 from clint.arguments import Args
 from clint.textui import prompt, puts, colored, validators
 
-from commands import start_ec2, stop_ec2, ssh_login, ssh_launch, validate_stack_exists, create_stack, choose_stack, update_stack, delete_stack, upload_keys, attach_volume, list_all_ec2, create_ecr_registry, list_keypairs, scp
+from commands import start_ec2, stop_ec2, ssh_login, ssh_launch, validate_stack_exists, create_stack, choose_stack, update_stack, delete_stack, upload_keys, attach_volume, list_all_ec2, create_ecr_registry, list_keypairs, scp, detach_volume, attach_volume
 
 def main():
     args = Args()
@@ -26,6 +26,10 @@ def main():
         ssh_launch()
     elif arg_cmd == 'scp':
         scp()
+    elif arg_cmd == 'attach-volume':
+        attach_volume()
+    elif arg_cmd == 'detach-volume':
+        detach_volume()
     elif arg_cmd == 'create-stack':
         arg1 = args.get(1)
         if arg1:

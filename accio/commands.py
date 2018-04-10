@@ -11,6 +11,11 @@ boto3.setup_default_session(profile_name='stephen')
 ec2_client = boto3.client('ec2')
 cf_client = boto3.client('cloudformation')
 
+def attach_volume():
+    pass
+def detach_volume():
+    pass
+
 def status_checks():
     # aws ec2 describe-instance-status --instance-ids i-1234567890abcdef0
     pass

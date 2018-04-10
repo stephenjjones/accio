@@ -9,6 +9,4 @@ To Do List
 * Change all values to variables in CF template
 * Attach volume command
 * Paramaterize aws profile
-* Paramaterize keypair
-* scp
 * spot instances
